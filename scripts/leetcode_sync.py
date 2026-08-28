@@ -1,13 +1,18 @@
 import os
 import re
+import time
 import requests
 from pathlib import Path
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
 
 LEETCODE_URL = "https://leetcode.com/graphql/"
 
 SESSION = os.environ["LEETCODE_SESSION"]
 CSRF = os.environ["LEETCODE_CSRF_TOKEN"]
-USERNAME = os.environ["LEETCODE_USERNAME"]
 
 cookies = {
     "LEETCODE_SESSION": SESSION,
@@ -16,13 +21,18 @@ cookies = {
 
 headers = {
     "Content-Type": "application/json",
-    "Referer": "https://leetcode.com/",
+    "Referer": "https://leetcode.com/progress/",
     "Origin": "https://leetcode.com",
     "User-Agent": "Mozilla/5.0",
 }
 
 
+# ============================================================
+# GRAPHQL HELPER
+# ============================================================
+
 def graphql(query, variables, operation_name):
+
     response = requests.post(
         LEETCODE_URL,
         json={
@@ -44,62 +54,130 @@ def graphql(query, variables, operation_name):
     if "errors" in data:
         raise Exception(data["errors"])
 
+    if not data.get("data"):
+        raise Exception("LeetCode returned no data")
+
     return data["data"]
 
 
-# --------------------------------------------------
-# Get recent accepted submissions
-# --------------------------------------------------
+# ============================================================
+# GET ALL SOLVED PROBLEMS
+# ============================================================
 
-recent_query = """
-query recentAcSubmissionList($username: String!, $limit: Int!) {
-    recentAcSubmissionList(username: $username, limit: $limit) {
-        id
-        title
-        titleSlug
-        timestamp
-    }
-}
-"""
+def get_all_solved_problems():
 
-recent = graphql(
-    recent_query,
-    {
-        "username": USERNAME,
-        "limit": 100,
-    },
-    "recentAcSubmissionList",
-)["recentAcSubmissionList"]
-
-
-# --------------------------------------------------
-# Get problem information
-# --------------------------------------------------
-
-def get_question(slug):
     query = """
-    query questionData($titleSlug: String!) {
-        question(titleSlug: $titleSlug) {
-            questionFrontendId
-            title
-            titleSlug
-            difficulty
+    query userProgressQuestionList(
+        $filters: UserProgressQuestionListInput
+    ) {
+        userProgressQuestionList(filters: $filters) {
+            totalNum
+            questions {
+                frontendId
+                title
+                titleSlug
+                difficulty
+                lastSubmittedAt
+            }
         }
     }
     """
 
-    return graphql(
+    all_questions = []
+    skip = 0
+    limit = 100
+
+    while True:
+
+        print(
+            f"Fetching solved problems "
+            f"(starting at {skip})..."
+        )
+
+        result = graphql(
+            query,
+            {
+                "filters": {
+                    "questionStatus": "SOLVED",
+                    "skip": skip,
+                    "limit": limit,
+                }
+            },
+            "userProgressQuestionList",
+        )
+
+        progress = result["userProgressQuestionList"]
+
+        questions = progress["questions"]
+
+        all_questions.extend(questions)
+
+        total = progress["totalNum"]
+
+        print(
+            f"Found {len(all_questions)} / {total} solved problems"
+        )
+
+        if len(all_questions) >= total:
+            break
+
+        if not questions:
+            break
+
+        skip += limit
+
+        # Avoid hammering LeetCode
+        time.sleep(1)
+
+    return all_questions
+
+
+# ============================================================
+# GET SUBMISSIONS FOR A PROBLEM
+# ============================================================
+
+def get_submissions(title_slug):
+
+    query = """
+    query submissionList(
+        $offset: Int!,
+        $limit: Int!,
+        $questionSlug: String!
+    ) {
+        questionSubmissionList(
+            offset: $offset,
+            limit: $limit,
+            questionSlug: $questionSlug
+        ) {
+            submissions {
+                id
+                statusDisplay
+                lang
+                timestamp
+            }
+        }
+    }
+    """
+
+    result = graphql(
         query,
-        {"titleSlug": slug},
-        "questionData",
-    )["question"]
+        {
+            "offset": 0,
+            "limit": 20,
+            "questionSlug": title_slug,
+        },
+        "submissionList",
+    )
+
+    return result["questionSubmissionList"]["submissions"]
 
 
-# --------------------------------------------------
-# Get submitted code
-# --------------------------------------------------
+# ============================================================
+# GET ACTUAL SOURCE CODE
+# ============================================================
 
-def get_submission(submission_id):
+def get_submission_details(submission_id):
+
     query = """
     query submissionDetails($submissionId: Int!) {
         submissionDetails(submissionId: $submissionId) {
@@ -112,18 +190,23 @@ def get_submission(submission_id):
     }
     """
 
-    return graphql(
+    result = graphql(
         query,
-        {"submissionId": int(submission_id)},
+        {
+            "submissionId": int(submission_id),
+        },
         "submissionDetails",
-    )["submissionDetails"]
+    )
+
+    return result["submissionDetails"]
 
 
-# --------------------------------------------------
-# Supported languages
-# --------------------------------------------------
+# ============================================================
+# LANGUAGE → FILE EXTENSION
+# ============================================================
 
 LANG_EXTENSIONS = {
+
     "python": "py",
     "python3": "py",
 
@@ -147,45 +230,160 @@ LANG_EXTENSIONS = {
 
     "csharp": "cs",
     "c#": "cs",
+
+    "ruby": "rb",
+
+    "php": "php",
+
+    "scala": "scala",
+
+    "dart": "dart",
+
+    "sql": "sql",
+
 }
 
 
-# --------------------------------------------------
-# Clean folder/file names
-# --------------------------------------------------
+# ============================================================
+# CLEAN FILE/FOLDER NAMES
+# ============================================================
 
 def clean_name(name):
-    name = re.sub(r'[<>:"/\\|?*]', "", name)
+
+    name = re.sub(
+        r'[<>:"/\\|?*]',
+        "",
+        name
+    )
+
     name = name.strip()
+
     return name.replace(" ", "-")
 
 
-# --------------------------------------------------
-# Sync submissions
-# --------------------------------------------------
+# ============================================================
+# FIND LATEST ACCEPTED SUBMISSION
+# ============================================================
 
-for submission in recent:
+def get_latest_accepted_submission(title_slug):
+
+    submissions = get_submissions(title_slug)
+
+    accepted = [
+        submission
+        for submission in submissions
+        if submission["statusDisplay"] == "Accepted"
+    ]
+
+    if not accepted:
+        return None
+
+    # Newest submission first
+    accepted.sort(
+        key=lambda x: int(x["timestamp"]),
+        reverse=True
+    )
+
+    return accepted[0]
+
+
+# ============================================================
+# MAIN SYNC
+# ============================================================
+
+print("=" * 60)
+print("        LEETCODE → GITHUB SYNC")
+print("=" * 60)
+
+try:
+
+    solved_problems = get_all_solved_problems()
+
+except Exception as error:
+
+    print(
+        "ERROR while getting solved problems:"
+    )
+
+    print(error)
+
+    raise
+
+
+print()
+print(
+    f"Total solved problems found: "
+    f"{len(solved_problems)}"
+)
+
+print()
+
+
+# ============================================================
+# PROCESS EVERY SOLVED PROBLEM
+# ============================================================
+
+for index, problem in enumerate(
+    solved_problems,
+    start=1
+):
+
+    title = problem["title"]
+    slug = problem["titleSlug"]
+    difficulty = problem["difficulty"]
 
     try:
-        question = get_question(submission["titleSlug"])
 
-        if not question:
+        print(
+            f"[{index}/{len(solved_problems)}] "
+            f"{difficulty} - {title}"
+        )
+
+        # ----------------------------------------------------
+        # Find accepted submission
+        # ----------------------------------------------------
+
+        submission = get_latest_accepted_submission(
+            slug
+        )
+
+        if not submission:
+
+            print(
+                f"  ⚠ No accepted submission found"
+            )
+
             continue
 
-        difficulty = question["difficulty"]
+        # ----------------------------------------------------
+        # Get source code
+        # ----------------------------------------------------
 
-        if difficulty not in ["Easy", "Medium", "Hard"]:
-            continue
-
-        details = get_submission(submission["id"])
+        details = get_submission_details(
+            submission["id"]
+        )
 
         if not details:
+
+            print(
+                f"  ⚠ Could not get submission details"
+            )
+
             continue
 
         if details["statusDisplay"] != "Accepted":
+
+            print(
+                f"  ⚠ Submission is not accepted"
+            )
+
             continue
 
         code = details["code"]
+
+        # ----------------------------------------------------
+        # Get language
+        # ----------------------------------------------------
 
         language = details["lang"]["name"]
 
@@ -194,24 +392,40 @@ for submission in recent:
         )
 
         if not extension:
+
             print(
-                f"Skipping unsupported language: {language}"
+                f"  ⚠ Unsupported language: "
+                f"{language}"
             )
+
             continue
 
+        # ----------------------------------------------------
+        # Problem number
+        # ----------------------------------------------------
+
         number = str(
-            question["questionFrontendId"]
+            problem["frontendId"]
         ).zfill(4)
 
-        title = clean_name(
-            question["title"]
+        clean_title = clean_name(
+            title
         )
 
+        # ----------------------------------------------------
+        # Create folder
+        #
         # Example:
-        # Easy/0121-Best-Time-to-Buy-and-Sell-Stock
+        #
+        # Easy/
+        # └── 0121-Best-Time-to-Buy-and-Sell-Stock/
+        #     └── solution.java
+        #
+        # ----------------------------------------------------
+
         folder = Path(
             difficulty,
-            f"{number}-{title}"
+            f"{number}-{clean_title}"
         )
 
         folder.mkdir(
@@ -220,8 +434,13 @@ for submission in recent:
         )
 
         solution_file = (
-            folder / f"solution.{extension}"
+            folder /
+            f"solution.{extension}"
         )
+
+        # ----------------------------------------------------
+        # Write solution
+        # ----------------------------------------------------
 
         solution_file.write_text(
             code,
@@ -229,18 +448,29 @@ for submission in recent:
         )
 
         print(
-            f"Synced: "
-            f"{difficulty}/"
-            f"{number}-{title}/"
-            f"solution.{extension}"
+            f"  ✓ Synced → "
+            f"{folder}/solution.{extension}"
         )
+
+        # Small delay
+        time.sleep(1)
 
     except Exception as error:
 
         print(
-            f"Error processing "
-            f"{submission['title']}: {error}"
+            f"  ✗ Error processing "
+            f"{title}: {error}"
         )
 
+        # Continue with the next problem
+        continue
 
-print("LeetCode sync completed!")
+
+# ============================================================
+# FINISHED
+# ============================================================
+
+print()
+print("=" * 60)
+print("           SYNC COMPLETED")
+print("=" * 60)
