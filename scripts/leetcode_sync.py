@@ -22,10 +22,11 @@ headers = {
 }
 
 
-def graphql(query, variables):
+def graphql(query, variables, operation_name):
     response = requests.post(
         LEETCODE_URL,
         json={
+            "operationName": operation_name,
             "query": query,
             "variables": variables,
         },
@@ -34,7 +35,9 @@ def graphql(query, variables):
         timeout=30,
     )
 
-    response.raise_for_status()
+    if response.status_code != 200:
+        print("LeetCode response:", response.text)
+        response.raise_for_status()
 
     data = response.json()
 
@@ -62,9 +65,11 @@ recent = graphql(
         "username": USERNAME,
         "limit": 100,
     },
+    "recentAcSubmissionList",
 )["recentAcSubmissionList"]
 
 
+# Get problem information
 def get_question(slug):
     query = """
     query questionData($titleSlug: String!) {
@@ -80,9 +85,11 @@ def get_question(slug):
     return graphql(
         query,
         {"titleSlug": slug},
+        "questionData",
     )["question"]
 
 
+# Get submitted code
 def get_submission(submission_id):
     query = """
     query submissionDetails($submissionId: Int!) {
@@ -97,9 +104,11 @@ def get_submission(submission_id):
     return graphql(
         query,
         {"submissionId": int(submission_id)},
+        "submissionDetails",
     )["submissionDetails"]
 
 
+# Supported languages
 LANG_EXTENSIONS = {
     "python": "py",
     "python3": "py",
@@ -124,6 +133,7 @@ def clean_name(name):
     return name.replace(" ", "-")
 
 
+# Process submissions
 for submission in recent:
 
     try:
@@ -183,5 +193,6 @@ for submission in recent:
         print(
             f"Error processing {submission['title']}: {error}"
         )
+
 
 print("LeetCode sync completed!")
