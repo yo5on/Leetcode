@@ -47,7 +47,10 @@ def graphql(query, variables, operation_name):
     return data["data"]
 
 
+# --------------------------------------------------
 # Get recent accepted submissions
+# --------------------------------------------------
+
 recent_query = """
 query recentAcSubmissionList($username: String!, $limit: Int!) {
     recentAcSubmissionList(username: $username, limit: $limit) {
@@ -69,7 +72,10 @@ recent = graphql(
 )["recentAcSubmissionList"]
 
 
+# --------------------------------------------------
 # Get problem information
+# --------------------------------------------------
+
 def get_question(slug):
     query = """
     query questionData($titleSlug: String!) {
@@ -89,13 +95,18 @@ def get_question(slug):
     )["question"]
 
 
+# --------------------------------------------------
 # Get submitted code
+# --------------------------------------------------
+
 def get_submission(submission_id):
     query = """
     query submissionDetails($submissionId: Int!) {
         submissionDetails(submissionId: $submissionId) {
             code
-            lang
+            lang {
+                name
+            }
             statusDisplay
         }
     }
@@ -108,24 +119,40 @@ def get_submission(submission_id):
     )["submissionDetails"]
 
 
+# --------------------------------------------------
 # Supported languages
+# --------------------------------------------------
+
 LANG_EXTENSIONS = {
     "python": "py",
     "python3": "py",
+
     "java": "java",
+
     "c": "c",
+
     "cpp": "cpp",
     "c++": "cpp",
+
     "javascript": "js",
     "typescript": "ts",
+
     "kotlin": "kt",
+
     "go": "go",
+
     "rust": "rs",
+
     "swift": "swift",
+
     "csharp": "cs",
     "c#": "cs",
 }
 
+
+# --------------------------------------------------
+# Clean folder/file names
+# --------------------------------------------------
 
 def clean_name(name):
     name = re.sub(r'[<>:"/\\|?*]', "", name)
@@ -133,7 +160,10 @@ def clean_name(name):
     return name.replace(" ", "-")
 
 
-# Process submissions
+# --------------------------------------------------
+# Sync submissions
+# --------------------------------------------------
+
 for submission in recent:
 
     try:
@@ -156,17 +186,29 @@ for submission in recent:
             continue
 
         code = details["code"]
-        language = details["lang"]
 
-        extension = LANG_EXTENSIONS.get(language.lower())
+        language = details["lang"]["name"]
+
+        extension = LANG_EXTENSIONS.get(
+            language.lower()
+        )
 
         if not extension:
-            print(f"Skipping unsupported language: {language}")
+            print(
+                f"Skipping unsupported language: {language}"
+            )
             continue
 
-        number = str(question["questionFrontendId"]).zfill(4)
-        title = clean_name(question["title"])
+        number = str(
+            question["questionFrontendId"]
+        ).zfill(4)
 
+        title = clean_name(
+            question["title"]
+        )
+
+        # Example:
+        # Easy/0121-Best-Time-to-Buy-and-Sell-Stock
         folder = Path(
             difficulty,
             f"{number}-{title}"
@@ -177,7 +219,9 @@ for submission in recent:
             exist_ok=True
         )
 
-        solution_file = folder / f"solution.{extension}"
+        solution_file = (
+            folder / f"solution.{extension}"
+        )
 
         solution_file.write_text(
             code,
@@ -185,13 +229,17 @@ for submission in recent:
         )
 
         print(
-            f"Synced: {difficulty}/{number}-{title}/"
+            f"Synced: "
+            f"{difficulty}/"
+            f"{number}-{title}/"
             f"solution.{extension}"
         )
 
     except Exception as error:
+
         print(
-            f"Error processing {submission['title']}: {error}"
+            f"Error processing "
+            f"{submission['title']}: {error}"
         )
 
 
