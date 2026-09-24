@@ -24,6 +24,7 @@ headers = {
     "Referer": "https://leetcode.com/progress/",
     "Origin": "https://leetcode.com",
     "User-Agent": "Mozilla/5.0",
+    "x-csrftoken": CSRF,
 }
 
 
@@ -46,18 +47,45 @@ def graphql(query, variables, operation_name):
     )
 
     if response.status_code != 200:
-        print("LeetCode response:", response.text)
+        print("LeetCode HTTP response:", response.text)
         response.raise_for_status()
 
     data = response.json()
 
     if "errors" in data:
-        raise Exception(data["errors"])
+        raise Exception(f"LeetCode GraphQL errors: {data['errors']}")
 
     if not data.get("data"):
-        raise Exception("LeetCode returned no data")
+        raise Exception(f"LeetCode returned no data: {data}")
 
     return data["data"]
+
+
+# ============================================================
+# VERIFY LOGIN
+# ============================================================
+
+def verify_login():
+
+    query = """
+    query userStatus {
+        userStatus {
+            isSignedIn
+            username
+        }
+    }
+    """
+
+    result = graphql(query, {}, "userStatus")
+    status = result.get("userStatus")
+
+    if not status or not status.get("isSignedIn"):
+        raise Exception(
+            "LeetCode authentication failed. "
+            "LEETCODE_SESSION or LEETCODE_CSRF_TOKEN may be expired."
+        )
+
+    print(f"Authenticated as: {status.get('username')}")
 
 
 # ============================================================
@@ -106,13 +134,19 @@ def get_all_solved_problems():
             "userProgressQuestionList",
         )
 
-        progress = result["userProgressQuestionList"]
+        progress = result.get("userProgressQuestionList")
 
-        questions = progress["questions"]
+        if progress is None:
+            raise Exception(
+                "LeetCode returned null for userProgressQuestionList. "
+                "Authentication succeeded, but this progress endpoint "
+                "did not return a result."
+            )
 
+        questions = progress.get("questions") or []
         all_questions.extend(questions)
 
-        total = progress["totalNum"]
+        total = progress.get("totalNum", len(all_questions))
 
         print(
             f"Found {len(all_questions)} / {total} solved problems"
@@ -169,7 +203,12 @@ def get_submissions(title_slug):
         "submissionList",
     )
 
-    return result["questionSubmissionList"]["submissions"]
+    submission_list = result.get("questionSubmissionList")
+
+    if not submission_list:
+        return []
+
+    return submission_list.get("submissions") or []
 
 
 # ============================================================
@@ -198,7 +237,7 @@ def get_submission_details(submission_id):
         "submissionDetails",
     )
 
-    return result["submissionDetails"]
+    return result.get("submissionDetails")
 
 
 # ============================================================
@@ -206,41 +245,25 @@ def get_submission_details(submission_id):
 # ============================================================
 
 LANG_EXTENSIONS = {
-
     "python": "py",
     "python3": "py",
-
     "java": "java",
-
     "c": "c",
-
     "cpp": "cpp",
     "c++": "cpp",
-
     "javascript": "js",
     "typescript": "ts",
-
     "kotlin": "kt",
-
     "go": "go",
-
     "rust": "rs",
-
     "swift": "swift",
-
     "csharp": "cs",
     "c#": "cs",
-
     "ruby": "rb",
-
     "php": "php",
-
     "scala": "scala",
-
     "dart": "dart",
-
     "sql": "sql",
-
 }
 
 
@@ -278,7 +301,6 @@ def get_latest_accepted_submission(title_slug):
     if not accepted:
         return None
 
-    # Newest submission first
     accepted.sort(
         key=lambda x: int(x["timestamp"]),
         reverse=True
@@ -296,17 +318,12 @@ print("        LEETCODE → GITHUB SYNC")
 print("=" * 60)
 
 try:
-
+    verify_login()
     solved_problems = get_all_solved_problems()
 
 except Exception as error:
-
-    print(
-        "ERROR while getting solved problems:"
-    )
-
+    print("ERROR while getting solved problems:")
     print(error)
-
     raise
 
 
@@ -315,7 +332,6 @@ print(
     f"Total solved problems found: "
     f"{len(solved_problems)}"
 )
-
 print()
 
 
@@ -339,89 +355,33 @@ for index, problem in enumerate(
             f"{difficulty} - {title}"
         )
 
-        # ----------------------------------------------------
-        # Find accepted submission
-        # ----------------------------------------------------
-
-        submission = get_latest_accepted_submission(
-            slug
-        )
+        submission = get_latest_accepted_submission(slug)
 
         if not submission:
-
-            print(
-                f"  ⚠ No accepted submission found"
-            )
-
+            print("  ⚠ No accepted submission found")
             continue
 
-        # ----------------------------------------------------
-        # Get source code
-        # ----------------------------------------------------
-
-        details = get_submission_details(
-            submission["id"]
-        )
+        details = get_submission_details(submission["id"])
 
         if not details:
-
-            print(
-                f"  ⚠ Could not get submission details"
-            )
-
+            print("  ⚠ Could not get submission details")
             continue
 
         if details["statusDisplay"] != "Accepted":
-
-            print(
-                f"  ⚠ Submission is not accepted"
-            )
-
+            print("  ⚠ Submission is not accepted")
             continue
 
         code = details["code"]
-
-        # ----------------------------------------------------
-        # Get language
-        # ----------------------------------------------------
-
         language = details["lang"]["name"]
 
-        extension = LANG_EXTENSIONS.get(
-            language.lower()
-        )
+        extension = LANG_EXTENSIONS.get(language.lower())
 
         if not extension:
-
-            print(
-                f"  ⚠ Unsupported language: "
-                f"{language}"
-            )
-
+            print(f"  ⚠ Unsupported language: {language}")
             continue
 
-        # ----------------------------------------------------
-        # Problem number
-        # ----------------------------------------------------
-
-        number = str(
-            problem["frontendId"]
-        ).zfill(4)
-
-        clean_title = clean_name(
-            title
-        )
-
-        # ----------------------------------------------------
-        # Create folder
-        #
-        # Example:
-        #
-        # Easy/
-        # └── 0121-Best-Time-to-Buy-and-Sell-Stock/
-        #     └── solution.java
-        #
-        # ----------------------------------------------------
+        number = str(problem["frontendId"]).zfill(4)
+        clean_title = clean_name(title)
 
         folder = Path(
             difficulty,
@@ -433,14 +393,7 @@ for index, problem in enumerate(
             exist_ok=True
         )
 
-        solution_file = (
-            folder /
-            f"solution.{extension}"
-        )
-
-        # ----------------------------------------------------
-        # Write solution
-        # ----------------------------------------------------
+        solution_file = folder / f"solution.{extension}"
 
         solution_file.write_text(
             code,
@@ -452,23 +405,15 @@ for index, problem in enumerate(
             f"{folder}/solution.{extension}"
         )
 
-        # Small delay
         time.sleep(1)
 
     except Exception as error:
-
         print(
             f"  ✗ Error processing "
             f"{title}: {error}"
         )
-
-        # Continue with the next problem
         continue
 
-
-# ============================================================
-# FINISHED
-# ============================================================
 
 print()
 print("=" * 60)
