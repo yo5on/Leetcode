@@ -13,6 +13,7 @@ LEETCODE_URL = "https://leetcode.com/graphql/"
 
 SESSION = os.environ["LEETCODE_SESSION"]
 CSRF = os.environ["LEETCODE_CSRF_TOKEN"]
+EXPECTED_USERNAME = os.environ.get("LEETCODE_USERNAME", "").strip()
 
 cookies = {
     "LEETCODE_SESSION": SESSION,
@@ -85,7 +86,15 @@ def verify_login():
             "LEETCODE_SESSION or LEETCODE_CSRF_TOKEN may be expired."
         )
 
-    print(f"Authenticated as: {status.get('username')}")
+    username = (status.get("username") or "").strip()
+
+    if EXPECTED_USERNAME and username.lower() != EXPECTED_USERNAME.lower():
+        raise Exception(
+            f"Authenticated as '{username}', but LEETCODE_USERNAME is "
+            f"'{EXPECTED_USERNAME}'. Refusing to sync the wrong account."
+        )
+
+    print(f"Authenticated as: {username}")
 
 
 # ============================================================
@@ -193,22 +202,36 @@ def get_submissions(title_slug):
     }
     """
 
-    result = graphql(
-        query,
-        {
-            "offset": 0,
-            "limit": 20,
-            "questionSlug": title_slug,
-        },
-        "submissionList",
-    )
+    submissions = []
+    offset = 0
+    limit = 20
 
-    submission_list = result.get("questionSubmissionList")
+    while True:
+        result = graphql(
+            query,
+            {
+                "offset": offset,
+                "limit": limit,
+                "questionSlug": title_slug,
+            },
+            "submissionList",
+        )
 
-    if not submission_list:
-        return []
+        submission_list = result.get("questionSubmissionList")
 
-    return submission_list.get("submissions") or []
+        if not submission_list:
+            break
+
+        page = submission_list.get("submissions") or []
+        submissions.extend(page)
+
+        if len(page) < limit:
+            break
+
+        offset += limit
+        time.sleep(0.5)
+
+    return submissions
 
 
 # ============================================================
@@ -295,14 +318,14 @@ def get_latest_accepted_submission(title_slug):
     accepted = [
         submission
         for submission in submissions
-        if submission["statusDisplay"] == "Accepted"
+        if submission.get("statusDisplay") == "Accepted"
     ]
 
     if not accepted:
         return None
 
     accepted.sort(
-        key=lambda x: int(x["timestamp"]),
+        key=lambda x: int(x.get("timestamp", 0)),
         reverse=True
     )
 
