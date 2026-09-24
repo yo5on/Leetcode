@@ -346,7 +346,7 @@ for index, problem in enumerate(
 
     title = problem["title"]
     slug = problem["titleSlug"]
-    difficulty = problem["difficulty"]
+    difficulty = problem["difficulty"].capitalize()
 
     try:
 
