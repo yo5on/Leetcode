@@ -6,13 +6,11 @@
 
 <samp>python · github actions · graphql · automation</samp>
 
-**[Repository](https://github.com/yo5on/Leetcode)**
-
 </div>
 
 ---
 
-<samp>Automatically synchronize your accepted LeetCode solutions with a GitHub repository using GitHub Actions.</samp>
+<div align="center"><samp>Automatically synchronize your accepted LeetCode solutions with a GitHub repository using GitHub Actions.</samp></div>
 
 <samp>The workflow retrieves solved problems, identifies their difficulty and submission language, and organizes solutions into a clean repository structure.</samp>
 
