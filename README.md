@@ -12,22 +12,26 @@
 
 ---
 
-Automatically synchronize your accepted LeetCode solutions with a GitHub repository using GitHub Actions.
+<samp>Automatically synchronize your accepted LeetCode solutions with a GitHub repository using GitHub Actions.</samp>
 
-The workflow retrieves solved problems, identifies their difficulty and submission language, and organizes solutions into a clean repository structure.
+<samp>The workflow retrieves solved problems, identifies their difficulty and submission language, and organizes solutions into a clean repository structure.</samp>
 
-## Features
+---
 
-- Automatically syncs accepted LeetCode solutions
-- Retrieves solved-problem history
-- Organizes solutions by Easy, Medium, and Hard
-- Preserves the programming language used for each submission
-- Runs automatically every 6 hours
-- Supports manual synchronization through GitHub Actions
-- Requires no browser extension
-- Uses GitHub Secrets for authentication data
+<div align="center"><samp><b>Features</b></samp></div>
 
-## Repository Structure
+- <samp>Automatically syncs accepted LeetCode solutions</samp>
+- <samp>Retrieves solved-problem history</samp>
+- <samp>Organizes solutions by Easy, Medium, and Hard</samp>
+- <samp>Preserves the programming language used for each submission</samp>
+- <samp>Runs automatically every 6 hours</samp>
+- <samp>Supports manual synchronization through GitHub Actions</samp>
+- <samp>Requires no browser extension</samp>
+- <samp>Uses GitHub Secrets for authentication data</samp>
+
+---
+
+<div align="center"><samp><b>Repository Structure</b></samp></div>
 
 ```text
 Leetcode/
@@ -41,34 +45,38 @@ Leetcode/
 └── Hard/
 ```
 
-Each problem is placed inside its corresponding difficulty folder, and the solution file extension is determined automatically from the language used on LeetCode.
+<samp>Each problem is placed inside its corresponding difficulty folder, and the solution file extension is determined automatically from the language used on LeetCode.</samp>
 
-## Supported Languages
+---
 
-| Language | Extension |
+<div align="center"><samp><b>Supported Languages</b></samp></div>
+
+| <samp>Language</samp> | <samp>Extension</samp> |
 |---|---|
-| Python | `.py` |
-| Java | `.java` |
-| C | `.c` |
-| C++ | `.cpp` |
-| JavaScript | `.js` |
-| TypeScript | `.ts` |
-| Kotlin | `.kt` |
-| Go | `.go` |
-| Rust | `.rs` |
-| Swift | `.swift` |
-| C# | `.cs` |
-| Ruby | `.rb` |
-| PHP | `.php` |
-| Scala | `.scala` |
-| Dart | `.dart` |
-| SQL | `.sql` |
+| <samp>Python</samp> | <samp>.py</samp> |
+| <samp>Java</samp> | <samp>.java</samp> |
+| <samp>C</samp> | <samp>.c</samp> |
+| <samp>C++</samp> | <samp>.cpp</samp> |
+| <samp>JavaScript</samp> | <samp>.js</samp> |
+| <samp>TypeScript</samp> | <samp>.ts</samp> |
+| <samp>Kotlin</samp> | <samp>.kt</samp> |
+| <samp>Go</samp> | <samp>.go</samp> |
+| <samp>Rust</samp> | <samp>.rs</samp> |
+| <samp>Swift</samp> | <samp>.swift</samp> |
+| <samp>C#</samp> | <samp>.cs</samp> |
+| <samp>Ruby</samp> | <samp>.rb</samp> |
+| <samp>PHP</samp> | <samp>.php</samp> |
+| <samp>Scala</samp> | <samp>.scala</samp> |
+| <samp>Dart</samp> | <samp>.dart</samp> |
+| <samp>SQL</samp> | <samp>.sql</samp> |
 
-## Setup
+---
 
-### Enable GitHub Actions
+<div align="center"><samp><b>Setup</b></samp></div>
 
-Open:
+<samp><b>Enable GitHub Actions</b></samp>
+
+<samp>Open:</samp>
 
 ```text
 Repository
@@ -77,11 +85,11 @@ Repository
 → General
 ```
 
-Make sure GitHub Actions are allowed to run and the workflow has permission to write changes to the repository.
+<samp>Make sure GitHub Actions are allowed to run and the workflow has permission to write changes to the repository.</samp>
 
-### Add Repository Secrets
+<samp><b>Add Repository Secrets</b></samp>
 
-Create these repository secrets:
+<samp>Create these repository secrets:</samp>
 
 ```text
 LEETCODE_USERNAME
@@ -89,19 +97,23 @@ LEETCODE_SESSION
 LEETCODE_CSRF_TOKEN
 ```
 
-`LEETCODE_SESSION` and `LEETCODE_CSRF_TOKEN` are authentication credentials. Never commit or share their values.
+<samp><b>Important:</b> <code>LEETCODE_SESSION</code> and <code>LEETCODE_CSRF_TOKEN</code> are authentication credentials. Never commit or share their values.</samp>
 
-## Obtaining the LeetCode Cookies
+---
 
-1. Sign in to LeetCode.
-2. Open browser Developer Tools with `F12` or `Ctrl + Shift + I`.
-3. Open `Application → Storage → Cookies → https://leetcode.com`.
-4. Locate `LEETCODE_SESSION` and `csrftoken`.
-5. Copy only their Value fields into the corresponding GitHub repository secrets.
+<div align="center"><samp><b>Obtaining the LeetCode Cookies</b></samp></div>
 
-If either credential is exposed, revoke or refresh the LeetCode session and replace the affected GitHub Secret.
+1. <samp>Sign in to LeetCode.</samp>
+2. <samp>Open browser Developer Tools with <code>F12</code> or <code>Ctrl + Shift + I</code>.</samp>
+3. <samp>Open <code>Application → Storage → Cookies → https://leetcode.com</code>.</samp>
+4. <samp>Locate <code>LEETCODE_SESSION</code> and <code>csrftoken</code>.</samp>
+5. <samp>Copy only their Value fields into the corresponding GitHub repository secrets.</samp>
 
-## How Synchronization Works
+<samp>If either credential is exposed, revoke or refresh the LeetCode session and replace the affected GitHub Secret.</samp>
+
+---
+
+<div align="center"><samp><b>How Synchronization Works</b></samp></div>
 
 ```text
 LeetCode
@@ -128,18 +140,22 @@ Commit changes
 GitHub repository
 ```
 
-## Automatic Synchronization
+---
 
-The workflow runs every 6 hours:
+<div align="center"><samp><b>Automatic Synchronization</b></samp></div>
+
+<samp>The workflow runs every 6 hours:</samp>
 
 ```yaml
 schedule:
   - cron: "0 */6 * * *"
 ```
 
-The schedule uses UTC time. Synchronization can also be started manually from the Actions tab.
+<samp>The schedule uses UTC time. Synchronization can also be started manually from the Actions tab.</samp>
 
-## Manual Synchronization
+---
+
+<div align="center"><samp><b>Manual Synchronization</b></samp></div>
 
 ```text
 GitHub Repository
@@ -149,53 +165,63 @@ GitHub Repository
 → Run workflow
 ```
 
-## Security Considerations
+---
 
-Never:
+<div align="center"><samp><b>Security Considerations</b></samp></div>
 
-- Commit authentication cookies to Git
-- Add them to source code
-- Put them in workflow YAML
-- Share them in screenshots
-- Post them publicly
-- Send them to other people
+<samp><b>Never:</b></samp>
 
-Use GitHub Repository Secrets instead.
+- <samp>Commit authentication cookies to Git</samp>
+- <samp>Add them to source code</samp>
+- <samp>Put them in workflow YAML</samp>
+- <samp>Share them in screenshots</samp>
+- <samp>Post them publicly</samp>
+- <samp>Send them to other people</samp>
 
-## Troubleshooting
+<samp>Use GitHub Repository Secrets instead.</samp>
 
-### Workflow authentication errors
+---
 
-Check that the username and both authentication secrets are current and belong to the correct LeetCode account.
+<div align="center"><samp><b>Troubleshooting</b></samp></div>
 
-### Solutions are not appearing
+<samp><b>Workflow authentication errors</b></samp>
 
-Run the workflow manually and inspect the workflow logs.
+<samp>Check that the username and both authentication secrets are current and belong to the correct LeetCode account.</samp>
 
-### LeetCode API errors
+<samp><b>Solutions are not appearing</b></samp>
 
-The project uses LeetCode's authenticated GraphQL endpoints. These endpoints may change without notice. If the GraphQL schema changes, `scripts/leetcode_sync.py` may need to be updated.
+<samp>Run the workflow manually and inspect the workflow logs.</samp>
 
-## Project Files
+<samp><b>LeetCode API errors</b></samp>
+
+<samp>The project uses LeetCode's authenticated GraphQL endpoints. These endpoints may change without notice. If the GraphQL schema changes, <code>scripts/leetcode_sync.py</code> may need to be updated.</samp>
+
+---
+
+<div align="center"><samp><b>Project Files</b></samp></div>
 
 ```text
 .github/workflows/leetcode.yml
 ```
 
-GitHub Actions workflow responsible for scheduled and manual synchronization.
+<samp>GitHub Actions workflow responsible for scheduled and manual synchronization.</samp>
 
 ```text
 scripts/leetcode_sync.py
 ```
 
-Python synchronization logic that retrieves solved problems and writes solutions to the repository.
+<samp>Python synchronization logic that retrieves solved problems and writes solutions to the repository.</samp>
 
-## Disclaimer
+---
 
-This project is an independent community tool and is not affiliated with or endorsed by LeetCode.
+<div align="center"><samp><b>Disclaimer</b></samp></div>
 
-Because it relies on authenticated LeetCode endpoints, functionality may change if LeetCode modifies its website or API.
+<samp>This project is an independent community tool and is not affiliated with or endorsed by LeetCode.</samp>
 
-## License
+<samp>Because it relies on authenticated LeetCode endpoints, functionality may change if LeetCode modifies its website or API.</samp>
 
-You are free to use, modify, and distribute this setup for personal or educational purposes.
+---
+
+<div align="center"><samp><b>License</b></samp></div>
+
+<samp>You are free to use, modify, and distribute this setup for personal or educational purposes.</samp>
