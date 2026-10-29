@@ -181,4 +181,4 @@ schedule:
 
 <div align="center"><samp><b>License</b></samp></div>
 
-<samp>You are free to use, modify, and distribute this setup for personal or educational purposes.</samp>
+<samp>This project's original code is licensed under the MIT License. See [LICENSE](LICENSE) for details. Third-party dependencies remain under their respective licenses.</samp>
