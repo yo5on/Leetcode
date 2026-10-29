@@ -24,6 +24,66 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Diagnose LeetCode authentication
+        env:
+          LEETCODE_SESSION: ${{ secrets.LEETCODE_SESSION }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          import requests
+
+          session = os.environ.get("LEETCODE_SESSION", "")
+          csrf = os.environ.get("LEETCODE_CSRF_TOKEN", "")
+
+          print("Session secret present:", bool(session))
+          print("CSRF secret present:", bool(csrf))
+          print("Session has surrounding whitespace:", session != session.strip())
+          print("CSRF has surrounding whitespace:", csrf != csrf.strip())
+
+          if not session or not csrf:
+              raise SystemExit("A required GitHub Actions secret is empty.")
+
+          try:
+              response = requests.post(
+                  "https://leetcode.com/graphql/",
+                  json={
+                      "operationName": "userStatus",
+                      "query": "query userStatus { userStatus { isSignedIn username } }",
+                      "variables": {},
+                  },
+                  headers={
+                      "Content-Type": "application/json",
+                      "Referer": "https://leetcode.com/",
+                      "Origin": "https://leetcode.com",
+                      "User-Agent": "Mozilla/5.0",
+                      "x-csrftoken": csrf.strip(),
+                  },
+                  cookies={
+                      "LEETCODE_SESSION": session.strip(),
+                      "csrftoken": csrf.strip(),
+                  },
+                  timeout=20,
+              )
+              print("HTTP status:", response.status_code)
+
+              try:
+                  data = response.json()
+              except ValueError:
+                  print("Response was not JSON.")
+                  raise SystemExit(0)
+
+              print("GraphQL errors present:", bool(data.get("errors")))
+              status = (data.get("data") or {}).get("userStatus")
+              print("User status returned:", status is not None)
+              if status is not None:
+                  print("Signed in:", status.get("isSignedIn"))
+                  print("Username returned:", bool(status.get("username")))
+          except requests.RequestException as exc:
+              print("Request failed with exception type:", type(exc).__name__)
+              print("No request or credential details were printed.")
+          PY
+
       - name: Run LeetCode sync
         run: python scripts/leetcode_sync.py
         env:
