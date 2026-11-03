@@ -118,7 +118,7 @@ Leetcode/
 
 > <samp><b>Expiry:</b> `LEETCODE_SESSION` stops working 14 days after you copy it, or as soon as you log out of that browser. Each run logs the expiry date and shows a warning when fewer than 3 days are left. To refresh, copy both cookies again from a browser profile you stay signed in to, then run `gh secret set LEETCODE_SESSION -R yo5on/Leetcode` and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. Both commands prompt for the value, so it never lands in your shell history.</samp>
 
-> <samp><b>Switching accounts:</b> Sign in to the new account on leetcode.com, then update all three secrets: `gh secret set LEETCODE_USERNAME -R yo5on/Leetcode`, `gh secret set LEETCODE_SESSION -R yo5on/Leetcode`, and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. The sync refuses to run if the cookies belong to a different account than `LEETCODE_USERNAME`. Solutions already in the repository stay; the progress stats switch to the new account on the next run.</samp>
+> <samp><b>Switching accounts:</b> Sign in to the new account on leetcode.com, then update all three secrets: `gh secret set LEETCODE_USERNAME -R yo5on/Leetcode`, `gh secret set LEETCODE_SESSION -R yo5on/Leetcode`, and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. The sync refuses to run if the cookies belong to a different account than `LEETCODE_USERNAME`. On the next run, the progress stats switch to the new account, and solutions for problems the new account has not solved are removed (only `solution.*` files inside problem folders are deleted).</samp>
 
 ---
 

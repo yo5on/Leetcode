@@ -74,6 +74,47 @@ def render_stats(readme, solved_problems):
     return STATS_BLOCK.sub(lambda m: m[1] + "\n".join(lines) + "\n" + m[2], readme)
 
 
+# ============================================================
+# STALE SOLUTION PRUNING
+# ============================================================
+
+SOLUTION_FOLDER = re.compile(r"\d{4}-.+")
+
+
+def prune_stale_solutions(keep_folders, root=Path(".")):
+    """Delete solution.* files in problem folders not in keep_folders.
+
+    keep_folders holds paths like Path("Easy", "0001-Two-Sum"), relative to root.
+    Only solution.* files inside NNNN-Title folders are touched, so other files
+    stay. Returns the deleted paths.
+    """
+
+    removed = []
+
+    for difficulty in ("Easy", "Medium", "Hard"):
+        base = root / difficulty
+
+        if not base.is_dir():
+            continue
+
+        for folder in base.iterdir():
+            if (
+                not folder.is_dir()
+                or not SOLUTION_FOLDER.fullmatch(folder.name)
+                or folder.relative_to(root) in keep_folders
+            ):
+                continue
+
+            for file in folder.glob("solution.*"):
+                file.unlink()
+                removed.append(file)
+
+            if not any(folder.iterdir()):
+                folder.rmdir()
+
+    return removed
+
+
 def _self_test():
 
     def jwt(claims):
@@ -96,6 +137,30 @@ def _self_test():
     assert updated.startswith("a\n<!-- LEETCODE-STATS:START -->") and updated.endswith("<!-- LEETCODE-STATS:END -->\nb")
     assert "Total Solved: 4" in updated and "Easy: 2" in updated and "Medium: 1" in updated and "Hard: 1" in updated
     assert "old" not in updated
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        files = {
+            "Easy/0001-A/solution.py": "keep",
+            "Easy/0002-B/solution.c": "stale",
+            "Easy/0002-B/notes.md": "personal",
+            "Medium/0003-C/solution.java": "stale",
+            "Hard/notes/solution.py": "personal",
+        }
+        for name, text in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+
+        removed = prune_stale_solutions({Path("Easy", "0001-A")}, root)
+
+        assert sorted(p.relative_to(root).as_posix() for p in removed) == [
+            "Easy/0002-B/solution.c", "Medium/0003-C/solution.java"]
+        assert (root / "Easy/0001-A/solution.py").exists()
+        assert (root / "Easy/0002-B/notes.md").exists()
+        assert not (root / "Medium/0003-C").exists()
+        assert (root / "Hard/notes/solution.py").exists()
 
     print("Self-test passed.")
 
@@ -434,6 +499,16 @@ def clean_name(name):
     return name.replace(" ", "-")
 
 
+def problem_folder(problem):
+
+    number = str(problem["frontendId"]).zfill(4)
+
+    return Path(
+        problem["difficulty"].capitalize(),
+        f"{number}-{clean_name(problem['title'])}"
+    )
+
+
 # ============================================================
 # FIND LATEST ACCEPTED SUBMISSION
 # ============================================================
@@ -489,6 +564,15 @@ readme_path.write_text(
     encoding="utf-8"
 )
 print("Updated LeetCode progress in README.md")
+
+# An empty list more likely means a bad response than a brand-new account,
+# so never let it wipe the repository.
+if solved_problems:
+    for path in prune_stale_solutions({problem_folder(p) for p in solved_problems}):
+        print(f"  ✗ Removed unsolved → {path}")
+else:
+    print("::warning::No solved problems returned; skipped removing stale solutions.")
+
 print()
 
 
@@ -543,13 +627,7 @@ for index, problem in enumerate(
             print(f"  ⚠ Unsupported language: {language}")
             continue
 
-        number = str(problem["frontendId"]).zfill(4)
-        clean_title = clean_name(title)
-
-        folder = Path(
-            difficulty,
-            f"{number}-{clean_title}"
-        )
+        folder = problem_folder(problem)
 
         folder.mkdir(
             parents=True,
@@ -557,6 +635,12 @@ for index, problem in enumerate(
         )
 
         solution_file = folder / f"solution.{extension}"
+
+        # Keep only the latest accepted language for each problem.
+        for old in folder.glob("solution.*"):
+            if old != solution_file:
+                old.unlink()
+                print(f"  ✗ Removed old language → {old}")
 
         solution_file.write_text(
             code,
