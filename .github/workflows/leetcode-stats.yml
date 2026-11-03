@@ -1,0 +1,43 @@
+name: LeetCode Stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: write
+
+# Shared with LeetCode Sync so the two never race on git push.
+concurrency:
+  group: leetcode-sync
+  cancel-in-progress: false
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Update README stats from public profile
+        run: python scripts/leetcode_stats.py
+        env:
+          LEETCODE_USERNAME: ${{ vars.LEETCODE_USERNAME || secrets.LEETCODE_USERNAME }}
+
+      - name: Commit stats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet || git commit -m "Update LeetCode stats"
+          git push

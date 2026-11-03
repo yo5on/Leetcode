@@ -1,14 +1,14 @@
 name: LeetCode Sync
 
+# Manual only: fetching solution code needs session cookies, which expire.
+# README stats update on their own via leetcode-stats.yml.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
 
 permissions:
   contents: write
 
-# Two overlapping runs would race on git push.
+# Shared with LeetCode Stats so the two never race on git push.
 concurrency:
   group: leetcode-sync
   cancel-in-progress: false
@@ -34,7 +34,7 @@ jobs:
         env:
           LEETCODE_SESSION: ${{ secrets.LEETCODE_SESSION }}
           LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
-          LEETCODE_USERNAME: ${{ secrets.LEETCODE_USERNAME }}
+          LEETCODE_USERNAME: ${{ vars.LEETCODE_USERNAME || secrets.LEETCODE_USERNAME }}
 
       - name: Commit solutions
         # Keep whatever synced before a partial failure.
@@ -42,6 +42,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Easy Medium Hard README.md
-          git diff --cached --quiet || git commit -m "Update LeetCode solutions and stats"
+          git add Easy Medium Hard
+          git diff --cached --quiet || git commit -m "Update LeetCode solutions"
           git push
