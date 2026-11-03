@@ -13,6 +13,19 @@
 
 ---
 
+<div align="center"><samp><b>LeetCode Progress</b></samp></div>
+
+<!-- LEETCODE-STATS:START -->
+- <samp>Total Solved: —</samp>
+- <samp>Easy: —</samp>
+- <samp>Medium: —</samp>
+- <samp>Hard: —</samp>
+<!-- LEETCODE-STATS:END -->
+
+<samp>Updated automatically by each sync run.</samp>
+
+---
+
 <div align="center"><samp><b>Features</b></samp></div>
 
 - <samp>Automatically syncs accepted LeetCode solutions</samp>
@@ -87,7 +100,7 @@ Leetcode/
 
 | <samp>Secret</samp> | <samp>Value to add</samp> |
 |---|---|
-| <samp>`LEETCODE_USERNAME`</samp> | <samp>Your LeetCode username: `yo5on`</samp> |
+| <samp>`LEETCODE_USERNAME`</samp> | <samp>Your LeetCode username</samp> |
 | <samp>`LEETCODE_SESSION`</samp> | <samp>The current `LEETCODE_SESSION` cookie value</samp> |
 | <samp>`LEETCODE_CSRF_TOKEN`</samp> | <samp>The current `csrftoken` cookie value</samp> |
 
@@ -104,6 +117,8 @@ Leetcode/
 > <samp><b>Security:</b> These cookies can grant access to your account. Never place their values in this file, source code, workflow YAML, screenshots, commits, or messages. Use only your own session. If a cookie expires, obtain a fresh value and update the secret.</samp>
 
 > <samp><b>Expiry:</b> `LEETCODE_SESSION` stops working 14 days after you copy it, or as soon as you log out of that browser. Each run logs the expiry date and shows a warning when fewer than 3 days are left. To refresh, copy both cookies again from a browser profile you stay signed in to, then run `gh secret set LEETCODE_SESSION -R yo5on/Leetcode` and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. Both commands prompt for the value, so it never lands in your shell history.</samp>
+
+> <samp><b>Switching accounts:</b> Sign in to the new account on leetcode.com, then update all three secrets: `gh secret set LEETCODE_USERNAME -R yo5on/Leetcode`, `gh secret set LEETCODE_SESSION -R yo5on/Leetcode`, and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. The sync refuses to run if the cookies belong to a different account than `LEETCODE_USERNAME`. Solutions already in the repository stay; the progress stats switch to the new account on the next run.</samp>
 
 ---
 

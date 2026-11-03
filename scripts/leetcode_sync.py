@@ -46,6 +46,34 @@ def session_expiry(token):
     return None
 
 
+# ============================================================
+# README PROGRESS STATS
+# ============================================================
+
+STATS_BLOCK = re.compile(
+    r"(<!-- LEETCODE-STATS:START -->\n).*?(<!-- LEETCODE-STATS:END -->)",
+    re.DOTALL,
+)
+
+
+def render_stats(readme, solved_problems):
+    """Return readme with the stats block replaced by counts from solved_problems."""
+
+    counts = {"Easy": 0, "Medium": 0, "Hard": 0}
+
+    for problem in solved_problems:
+        difficulty = problem["difficulty"].capitalize()
+        counts[difficulty] = counts.get(difficulty, 0) + 1
+
+    lines = [f"- <samp>Total Solved: {len(solved_problems)}</samp>"]
+    lines += [f"- <samp>{name}: {counts[name]}</samp>" for name in ("Easy", "Medium", "Hard")]
+
+    if not STATS_BLOCK.search(readme):
+        raise ValueError("README.md is missing the LEETCODE-STATS markers.")
+
+    return STATS_BLOCK.sub(lambda m: m[1] + "\n".join(lines) + "\n" + m[2], readme)
+
+
 def _self_test():
 
     def jwt(claims):
@@ -62,6 +90,12 @@ def _self_test():
         except ValueError:
             continue
         raise AssertionError(f"accepted malformed value {bad!r}")
+
+    readme = "a\n<!-- LEETCODE-STATS:START -->\nold\n<!-- LEETCODE-STATS:END -->\nb"
+    updated = render_stats(readme, [{"difficulty": d} for d in ("EASY", "EASY", "MEDIUM", "HARD")])
+    assert updated.startswith("a\n<!-- LEETCODE-STATS:START -->") and updated.endswith("<!-- LEETCODE-STATS:END -->\nb")
+    assert "Total Solved: 4" in updated and "Easy: 2" in updated and "Medium: 1" in updated and "Hard: 1" in updated
+    assert "old" not in updated
 
     print("Self-test passed.")
 
@@ -448,6 +482,13 @@ print(
     f"Total solved problems found: "
     f"{len(solved_problems)}"
 )
+
+readme_path = Path("README.md")
+readme_path.write_text(
+    render_stats(readme_path.read_text(encoding="utf-8"), solved_problems),
+    encoding="utf-8"
+)
+print("Updated LeetCode progress in README.md")
 print()
 
 
