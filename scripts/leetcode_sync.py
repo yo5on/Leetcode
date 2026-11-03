@@ -1,8 +1,74 @@
+import base64
+import json
 import os
 import re
+import sys
 import time
 import requests
+from datetime import datetime, timezone
 from pathlib import Path
+
+
+# ============================================================
+# SESSION COOKIE EXPIRY
+# ============================================================
+
+def session_expiry(token):
+    """Unix expiry time of a LEETCODE_SESSION JWT, or None if it has none.
+
+    Raises ValueError when the value is not a JWT at all.
+    """
+
+    if not re.fullmatch(r"[\w-]+\.[\w-]+\.[\w-]+", token):
+        raise ValueError(
+            "LEETCODE_SESSION is not a valid cookie value. Check for quotes, "
+            "a 'LEETCODE_SESSION=' prefix, or a truncated copy."
+        )
+
+    payload = token.split(".")[1]
+
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    except ValueError:
+        # Raised without the original error, which can quote bytes of the cookie.
+        raise ValueError("LEETCODE_SESSION payload could not be decoded.") from None
+
+    if not isinstance(claims, dict):
+        return None
+
+    if "exp" in claims:
+        return int(claims["exp"])
+
+    # LeetCode sessions expire _session_expiry seconds (14 days) after refreshed_at.
+    if "refreshed_at" in claims and "_session_expiry" in claims:
+        return int(claims["refreshed_at"]) + int(claims["_session_expiry"])
+
+    return None
+
+
+def _self_test():
+
+    def jwt(claims):
+        body = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+        return f"eyJhbGciOiJIUzI1NiJ9.{body}.sig"
+
+    assert session_expiry(jwt({"refreshed_at": 1000, "_session_expiry": 1209600})) == 1210600
+    assert session_expiry(jwt({"exp": 42})) == 42
+    assert session_expiry(jwt({"username": "x"})) is None
+
+    for bad in ('"a.b.c"', "LEETCODE_SESSION=a.b.c", "a.b", "", "a.!!.c", "a.bm90LWpzb24.c"):
+        try:
+            session_expiry(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted malformed value {bad!r}")
+
+    print("Self-test passed.")
+
+
+if "--self-test" in sys.argv:
+    _self_test()
+    sys.exit(0)
 
 
 # ============================================================
@@ -11,8 +77,8 @@ from pathlib import Path
 
 LEETCODE_URL = "https://leetcode.com/graphql/"
 
-SESSION = os.environ["LEETCODE_SESSION"]
-CSRF = os.environ["LEETCODE_CSRF_TOKEN"]
+SESSION = os.environ["LEETCODE_SESSION"].strip()
+CSRF = os.environ["LEETCODE_CSRF_TOKEN"].strip()
 EXPECTED_USERNAME = os.environ.get("LEETCODE_USERNAME", "").strip()
 
 cookies = {
@@ -68,6 +134,25 @@ def graphql(query, variables, operation_name):
 
 def verify_login():
 
+    # Only the expiry date is printed; the cookie and its other claims stay private.
+    expiry = session_expiry(SESSION)
+
+    if expiry is None:
+        print("::warning::Could not read the LEETCODE_SESSION expiry date.")
+    else:
+        expires_at = datetime.fromtimestamp(expiry, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        days_left = (expiry - time.time()) / 86400
+
+        if days_left <= 0:
+            print(f"::warning::LEETCODE_SESSION expired on {expires_at}.")
+        elif days_left < 3:
+            print(
+                f"::warning::LEETCODE_SESSION expires {expires_at} "
+                f"({days_left:.1f} days left). Refresh both secrets soon."
+            )
+        else:
+            print(f"LEETCODE_SESSION valid until {expires_at} ({days_left:.0f} days left).")
+
     query = """
     query userStatus {
         userStatus {
@@ -81,9 +166,17 @@ def verify_login():
     status = result.get("userStatus")
 
     if not status or not status.get("isSignedIn"):
+        if expiry is not None and expiry <= time.time():
+            reason = f"LEETCODE_SESSION expired on {expires_at}."
+        else:
+            reason = (
+                "LEETCODE_SESSION was rejected before its expiry date, usually "
+                "because you logged out of the browser it was copied from."
+            )
         raise Exception(
-            "LeetCode authentication failed. "
-            "LEETCODE_SESSION or LEETCODE_CSRF_TOKEN may be expired."
+            f"LeetCode authentication failed. {reason} "
+            "Sign in to leetcode.com and update LEETCODE_SESSION and "
+            "LEETCODE_CSRF_TOKEN with fresh cookie values."
         )
 
     username = (status.get("username") or "").strip()
@@ -362,6 +455,10 @@ print()
 # PROCESS EVERY SOLVED PROBLEM
 # ============================================================
 
+# A solved problem with no accepted submission or details usually means the
+# session dropped or LeetCode rate-limited us, so those count as failures too.
+failed = []
+
 for index, problem in enumerate(
     solved_problems,
     start=1
@@ -381,13 +478,15 @@ for index, problem in enumerate(
         submission = get_latest_accepted_submission(slug)
 
         if not submission:
-            print("  ⚠ No accepted submission found")
+            print("  ✗ No accepted submission found")
+            failed.append(title)
             continue
 
         details = get_submission_details(submission["id"])
 
         if not details:
-            print("  ⚠ Could not get submission details")
+            print("  ✗ Could not get submission details")
+            failed.append(title)
             continue
 
         if details["statusDisplay"] != "Accepted":
@@ -435,10 +534,18 @@ for index, problem in enumerate(
             f"  ✗ Error processing "
             f"{title}: {error}"
         )
+        failed.append(title)
         continue
 
 
 print()
 print("=" * 60)
+
+if failed:
+    print(f"   SYNC FINISHED WITH {len(failed)} FAILED PROBLEM(S)")
+    print("=" * 60)
+    print("Failed: " + ", ".join(failed))
+    sys.exit(1)
+
 print("           SYNC COMPLETED")
 print("=" * 60)

@@ -103,6 +103,8 @@ Leetcode/
 
 > <samp><b>Security:</b> These cookies can grant access to your account. Never place their values in this file, source code, workflow YAML, screenshots, commits, or messages. Use only your own session. If a cookie expires, obtain a fresh value and update the secret.</samp>
 
+> <samp><b>Expiry:</b> `LEETCODE_SESSION` stops working 14 days after you copy it, or as soon as you log out of that browser. Each run logs the expiry date and shows a warning when fewer than 3 days are left. To refresh, copy both cookies again from a browser profile you stay signed in to, then run `gh secret set LEETCODE_SESSION -R yo5on/Leetcode` and `gh secret set LEETCODE_CSRF_TOKEN -R yo5on/Leetcode`. Both commands prompt for the value, so it never lands in your shell history.</samp>
+
 ---
 
 <h2 align="center"><samp><b>2 · Enable Workflow Permissions</b></samp></h2>
@@ -141,6 +143,7 @@ schedule:
 <h3 align="center"><samp><b>Authentication Failed or Wrong Account</b></samp></h3>
 
 - <samp><samp>Confirm `LEETCODE_USERNAME` matches your LeetCode account.</samp></samp>
+- <samp><samp>Read the error: it says whether the cookie is malformed, expired on a given date, or was revoked by logging out.</samp></samp>
 - <samp><samp>Refresh `LEETCODE_SESSION` and `LEETCODE_CSRF_TOKEN` from the same signed-in account.</samp></samp>
 - <samp><samp>Check that you copied the cookie values, not the cookie names.</samp></samp>
 - <samp><samp>Save the updated values as repository secrets and rerun the workflow.</samp></samp>
