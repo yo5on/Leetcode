@@ -22,13 +22,14 @@ The stats keep themselves up to date forever with only your username. Cookies ar
 
 ### The progress card
 
-- **Total Solved** in large type, with a blue ring showing your share of all LeetCode problems.
-- **Easy** (green), **Medium** (amber), and **Hard** (red) cards, each with `solved / total`, a progress bar, and a percentage.
-- Percentages under 10% show one decimal (`0.2%`), and tiny shares show `<0.1%`. Any solved problem shows at least a dot on its bar, so it never looks like zero.
-- The card is a dark, fixed-palette SVG, so it reads the same in GitHub's light and dark themes. It has a 600×300 `viewBox` and the README sets `width="600"`; GitHub caps images at the page width, so it scales down on phones.
-- It is a plain static file in this repository: no scripts, web fonts, or external images, and no third-party image service that could go down. GitHub does not render inline `<svg>` in Markdown, which is why it is a separate file. Its alt text and `<title>` repeat all the counts for screen readers.
+- Built in the same visual language as the [profile README](https://github.com/yo5on/yo5on) graphics: embedded JetBrains Mono, Primer grey ink that follows the viewer's light/dark setting, a transparent background, 620 px wide, and one-shot SMIL entrances (staggered fades, a wipe with a scanning cursor).
+- The **official LeetCode logo** in its original colours is the highlight. Its black stroke turns white in dark mode, as on LeetCode's dark theme. It is revealed by an orange wipe, then a soft glow in LeetCode orange (`#FFA116`) pulses behind it while a light band sweeps across the orange body every few seconds.
+- The **total solved** number and your completion share use LeetCode orange, with the same glow pulse on the number.
+- Top right: your share of all problems (under 10% shows one decimal, tiny shares show `<0.1%`) and your username.
+- **easy** (teal), **medium** (yellow), and **hard** (red) rows in LeetCode's own difficulty colours, each with a progress bar and `solved / total`. Any solved problem shows at least a dot on its bar, so it never looks like zero.
+- It is a plain static file in this repository: no scripts and no external requests (the font subsets in [`scripts/fonts/`](scripts/fonts/), OFL-licensed, are inlined as base64). GitHub does not render inline `<svg>` in Markdown, which is why it is a separate file. Its alt text and `<title>` repeat all the counts for screen readers.
 
-The look lives in `render_svg()` in [`scripts/leetcode_stats.py`](scripts/leetcode_stats.py); colors are in `COLORS`. Edit those, run the self-test, and the next stats run redraws the card.
+The look lives in `render_svg()` in [`scripts/leetcode_stats.py`](scripts/leetcode_stats.py); brand orange is in `BRAND`, difficulty colours in `COLORS`, and the grey ink in `INK`. Edit those, run the self-test, and the next stats run redraws the card.
 
 Your profile must be public, which is LeetCode's default.
 
