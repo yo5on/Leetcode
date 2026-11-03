@@ -16,10 +16,10 @@
 <div align="center"><samp><b>LeetCode Progress</b></samp></div>
 
 <!-- LEETCODE-STATS:START -->
-- <samp>Total Solved: —</samp>
-- <samp>Easy: —</samp>
-- <samp>Medium: —</samp>
-- <samp>Hard: —</samp>
+- <samp>Total Solved: 2</samp>
+- <samp>Easy: 2</samp>
+- <samp>Medium: 0</samp>
+- <samp>Hard: 0</samp>
 <!-- LEETCODE-STATS:END -->
 
 <samp>Updated automatically by each sync run.</samp>
