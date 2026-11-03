@@ -56,8 +56,8 @@ STATS_BLOCK = re.compile(
 )
 
 
-def render_stats(readme, solved_problems):
-    """Return readme with the stats block replaced by counts from solved_problems."""
+def render_stats(readme, solved_problems, username):
+    """Return readme with the stats block replaced by username's profile and counts."""
 
     counts = {"Easy": 0, "Medium": 0, "Hard": 0}
 
@@ -65,7 +65,8 @@ def render_stats(readme, solved_problems):
         difficulty = problem["difficulty"].capitalize()
         counts[difficulty] = counts.get(difficulty, 0) + 1
 
-    lines = [f"- <samp>Total Solved: {len(solved_problems)}</samp>"]
+    lines = [f"- <samp>Profile: [{username}](https://leetcode.com/u/{username}/)</samp>"]
+    lines += [f"- <samp>Total Solved: {len(solved_problems)}</samp>"]
     lines += [f"- <samp>{name}: {counts[name]}</samp>" for name in ("Easy", "Medium", "Hard")]
 
     if not STATS_BLOCK.search(readme):
@@ -133,7 +134,8 @@ def _self_test():
         raise AssertionError(f"accepted malformed value {bad!r}")
 
     readme = "a\n<!-- LEETCODE-STATS:START -->\nold\n<!-- LEETCODE-STATS:END -->\nb"
-    updated = render_stats(readme, [{"difficulty": d} for d in ("EASY", "EASY", "MEDIUM", "HARD")])
+    updated = render_stats(readme, [{"difficulty": d} for d in ("EASY", "EASY", "MEDIUM", "HARD")], "someone")
+    assert "[someone](https://leetcode.com/u/someone/)" in updated
     assert updated.startswith("a\n<!-- LEETCODE-STATS:START -->") and updated.endswith("<!-- LEETCODE-STATS:END -->\nb")
     assert "Total Solved: 4" in updated and "Easy: 2" in updated and "Medium: 1" in updated and "Hard: 1" in updated
     assert "old" not in updated
@@ -287,6 +289,8 @@ def verify_login():
         )
 
     print(f"Authenticated as: {username}")
+
+    return username
 
 
 # ============================================================
@@ -543,7 +547,7 @@ print("        LEETCODE → GITHUB SYNC")
 print("=" * 60)
 
 try:
-    verify_login()
+    username = verify_login()
     solved_problems = get_all_solved_problems()
 
 except Exception as error:
@@ -560,7 +564,7 @@ print(
 
 readme_path = Path("README.md")
 readme_path.write_text(
-    render_stats(readme_path.read_text(encoding="utf-8"), solved_problems),
+    render_stats(readme_path.read_text(encoding="utf-8"), solved_problems, username),
     encoding="utf-8"
 )
 print("Updated LeetCode progress in README.md")
