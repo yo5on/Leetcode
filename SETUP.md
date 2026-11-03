@@ -4,7 +4,7 @@ This repository does two separate jobs with GitHub Actions:
 
 | Job | Workflow | Runs | Needs cookies? |
 |---|---|---|---|
-| **Stats**: Total, Easy, Medium, and Hard counts in [README.md](README.md) | [`leetcode-stats.yml`](.github/workflows/leetcode-stats.yml) | Every 6 hours and on demand | **No** |
+| **Stats**: a graphical progress card (Total, Easy, Medium, Hard) in [README.md](README.md) | [`leetcode-stats.yml`](.github/workflows/leetcode-stats.yml) | Every 6 hours and on demand | **No** |
 | **Solutions**: accepted code in `Easy/`, `Medium/`, `Hard/` | [`leetcode.yml`](.github/workflows/leetcode.yml) | On demand only | Yes |
 
 The stats keep themselves up to date forever with only your username. Cookies are needed only when you want to pull new solution code.
@@ -14,10 +14,21 @@ The stats keep themselves up to date forever with only your username. Cookies ar
 ### Stats (no login)
 
 1. [`leetcode-stats.yml`](.github/workflows/leetcode-stats.yml) runs [`scripts/leetcode_stats.py`](scripts/leetcode_stats.py) every six hours.
-2. The script asks LeetCode's public GraphQL API for `matchedUser(username).submitStats`, the same data anyone can see on your profile page. No cookie, token, or password is sent.
-3. It rewrites the block between `<!-- LEETCODE-STATS:START -->` and `<!-- LEETCODE-STATS:END -->` in `README.md` with your profile link and counts. Keep both markers in the README, or the update fails.
-4. If LeetCode returns no profile or an incomplete response, the script fails and leaves the README as it was.
-5. The workflow commits `README.md` only when the numbers changed.
+2. The script asks LeetCode's public GraphQL API for `matchedUser(username).submitStats` (your solved counts) and `allQuestionsCount` (how many problems exist per difficulty), the same data anyone can see on your profile page. No cookie, token, or password is sent.
+3. It draws [`assets/leetcode-stats.svg`](assets/leetcode-stats.svg), a progress card built from those numbers (see [The Progress Card](#the-progress-card)).
+4. It rewrites the block between `<!-- LEETCODE-STATS:START -->` and `<!-- LEETCODE-STATS:END -->` in `README.md` with the card image, linked to your profile, and a text profile link. Keep both markers in the README, or the update fails.
+5. If LeetCode returns no profile or an incomplete response, or the markers are missing, the script fails before writing anything, so the README and card stay as they were.
+6. The workflow commits `README.md` and the card only when they changed. The output has no timestamps, so a run with the same numbers produces identical files and no commit.
+
+### The progress card
+
+- **Total Solved** in large type, with a blue ring showing your share of all LeetCode problems.
+- **Easy** (green), **Medium** (amber), and **Hard** (red) cards, each with `solved / total`, a progress bar, and a percentage.
+- Percentages under 10% show one decimal (`0.2%`), and tiny shares show `<0.1%`. Any solved problem shows at least a dot on its bar, so it never looks like zero.
+- The card is a dark, fixed-palette SVG, so it reads the same in GitHub's light and dark themes. It has a 600×300 `viewBox` and the README sets `width="600"`; GitHub caps images at the page width, so it scales down on phones.
+- It is a plain static file in this repository: no scripts, web fonts, or external images, and no third-party image service that could go down. GitHub does not render inline `<svg>` in Markdown, which is why it is a separate file. Its alt text and `<title>` repeat all the counts for screen readers.
+
+The look lives in `render_svg()` in [`scripts/leetcode_stats.py`](scripts/leetcode_stats.py); colors are in `COLORS`. Edit those, run the self-test, and the next stats run redraws the card.
 
 Your profile must be public, which is LeetCode's default.
 
@@ -183,7 +194,7 @@ Confirm Actions is enabled and the workflows have write permission (step 2).
 
 ## Run the Self-Tests Locally
 
-Neither self-test contacts LeetCode or needs secrets:
+Neither self-test contacts LeetCode or needs secrets. The stats workflow also runs the first one before every update:
 
 ```bash
 python scripts/leetcode_stats.py --self-test
@@ -193,9 +204,9 @@ python scripts/leetcode_stats.py --self-test
 python scripts/leetcode_sync.py --self-test
 ```
 
-Each prints `Self-test passed.` on success. The first checks response validation and the README stats rendering; the second checks cookie expiry parsing and stale-solution cleanup.
+Each prints `Self-test passed.` on success. The first checks response validation, the progress maths (percentages, bar lengths, zero solved, zero problems), that the card is valid SVG with the right counts, and that a bad response leaves the README and card untouched; the second checks cookie expiry parsing and stale-solution cleanup.
 
-To try the real public stats fetch without committing, run it and inspect the result with `git diff README.md`:
+To try the real public stats fetch without committing, run it and inspect the result with `git diff` and by opening `assets/leetcode-stats.svg` in a browser:
 
 ```bash
 LEETCODE_USERNAME=yo5on python scripts/leetcode_stats.py
@@ -211,6 +222,8 @@ Leetcode/
 ├── scripts/
 │   ├── leetcode_stats.py    # public profile query and README update
 │   └── leetcode_sync.py     # sign-in, submission queries, solution files
+├── assets/
+│   └── leetcode-stats.svg   # progress card, drawn by the stats job
 ├── Easy/  Medium/  Hard/    # synced solutions, one folder per problem
 ├── README.md                # LeetCode progress, updated by the stats job
 └── SETUP.md                 # this guide

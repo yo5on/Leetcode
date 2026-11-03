@@ -8,9 +8,9 @@
 <div align="center"><samp><b>LeetCode Progress</b></samp></div>
 
 <!-- LEETCODE-STATS:START -->
-- <samp>Profile: [yo5on](https://leetcode.com/u/yo5on/)</samp>
-- <samp>Total Solved: 2</samp>
-- <samp>Easy: 2</samp>
-- <samp>Medium: 0</samp>
-- <samp>Hard: 0</samp>
+<p align="center">
+  <a href="https://leetcode.com/u/yo5on/"><img src="assets/leetcode-stats.svg" width="600" alt="LeetCode progress for yo5on: 2 solved (Easy 2 of 975, Medium 0 of 2138, Hard 0 of 987)"></a>
+</p>
+
+<p align="center"><samp>Profile: <a href="https://leetcode.com/u/yo5on/">yo5on</a></samp></p>
 <!-- LEETCODE-STATS:END -->
